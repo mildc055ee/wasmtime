@@ -245,6 +245,59 @@ pub trait FuncEnvironment: TargetEnvironment {
         Ok(pos.ins().call(callee, call_args))
     }
 
+    /// STUFF
+    fn translate_control(
+        &mut self,
+        mut pos: FuncCursor,
+        _callee_index: FuncIndex,
+        callee: ir::FuncRef,
+        call_arg: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        unimplemented!("spec: translate_control")
+        // Ok(pos.ins().call(callee, call_args))
+    }
+
+    /// STUFF
+    fn translate_restore(
+        &mut self,
+        pos: FuncCursor,
+        kid: ir::Value,
+        arg: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst>;
+
+    /// STUFF
+    fn translate_continuation_copy(
+        &mut self,
+        pos: FuncCursor,
+        kid: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst>;
+
+    /// STUFF
+    fn translate_prompt_begin(
+        &mut self,
+        pos: FuncCursor,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst>;
+
+    /// STUFF
+    fn translate_prompt_end(
+        &mut self,
+        pos: FuncCursor,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst>;
+
+    /// STUFF
+    fn translate_continuation_delete(
+        &mut self,
+        pos: FuncCursor,
+        kid: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst>;
+
+
     /// Translate a `memory.grow` WebAssembly instruction.
     ///
     /// The `index` provided identifies the linear memory to grow, and `heap` is the heap reference

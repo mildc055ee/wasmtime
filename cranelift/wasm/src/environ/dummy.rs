@@ -524,6 +524,63 @@ impl<'dummy_environment> FuncEnvironment for DummyFuncEnvironment<'dummy_environ
         Ok(())
     }
 
+    fn translate_control(
+        &mut self,
+        mut pos: FuncCursor,
+        _callee_index: FuncIndex,
+        callee: ir::FuncRef,
+        call_arg: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        unimplemented!("dummy translate_control")
+    }
+
+    fn translate_restore(
+        &mut self,
+        pos: FuncCursor,
+        kid: ir::Value,
+        arg: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        unimplemented!()
+    }
+
+    fn translate_continuation_copy(
+        &mut self,
+        pos: FuncCursor,
+        kid: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        unimplemented!()
+    }
+
+    fn translate_prompt_begin(
+        &mut self,
+        mut pos: FuncCursor<'_>,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        pos.ins().iconst(I32, 1234);
+        Ok(pos.ins().nop())
+    }
+
+    fn translate_prompt_end(
+        &mut self,
+        mut pos: FuncCursor<'_>,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        pos.ins().iconst(I32, 2345);
+        Ok(pos.ins().nop())
+    }
+
+    fn translate_continuation_delete(
+        &mut self,
+        pos: FuncCursor,
+        kid: ir::Value,
+        mem_index: MemoryIndex,
+    ) -> WasmResult<ir::Inst> {
+        unimplemented!()
+    }
+
     fn translate_data_drop(&mut self, _pos: FuncCursor, _seg_index: u32) -> WasmResult<()> {
         Ok(())
     }

@@ -391,6 +391,14 @@ pub fn translate_operator<FE: FuncEnvironment + ?Sized>(
             builder.switch_to_block(next_block);
             builder.seal_block(next_block);
 
+            if frame.is_prompt() {
+                let heap_index = MemoryIndex::from_u32(0);
+                environ.translate_prompt_end(
+                    builder.cursor(),
+                    heap_index
+                    )?;
+            }
+
             // If it is a loop we also have to seal the body loop block
             if let ControlStackFrame::Loop { header, .. } = frame {
                 builder.seal_block(header)
@@ -643,6 +651,66 @@ pub fn translate_operator<FE: FuncEnvironment + ?Sized>(
             let heap_index = MemoryIndex::from_u32(*mem);
             let heap = state.get_heap(builder.func, *mem, environ)?;
             state.push1(environ.translate_memory_size(builder.cursor(), heap_index, heap)?);
+        }
+
+        /******************************* Control / Restore ************************************
+         * This codes are ported from donald-pinckney/cranelift.
+         * Unnecessary comments are deleted
+         ************************************************************************************/
+        Operator::Control { function_index } => {
+            let heap_index = MemoryIndex::from_u32(0);
+            let arg = state.pop1();
+            let (fref, num_args) = state.get_direct_func(builder.func, *function_index, environ)?;
+            let call = environ.translate_control(
+                builder.cursor(),
+                FuncIndex::from_u32(*function_index),
+                fref,
+                arg,
+                heap_index
+            )?;
+            let inst_results = builder.inst_results(call);
+            state.pushn(inst_results);
+        }
+        Operator::Restore => {
+            let heap_index = MemoryIndex::from_u32(0);
+            let (kid, arg) = state.pop2();
+            environ.translate_restore(
+                builder.cursor(),
+                kid,
+                arg,
+                heap_index
+            )?;
+        }
+        Operator::ContinuationCopy => {
+            let heap_index = MemoryIndex::from_u32(0);
+            let kid = state.pop1();
+            let call = environ.translate_continuation_copy(
+                builder.cursor(),
+                kid,
+                heap_index
+            )?;
+            let inst_results = builder.inst_results(call);
+            state.pushn(inst_results);
+        }
+        Operator::Prompt { ty } => {
+            let heap_index = MemoryIndex::from_u32(0);
+            environ.translate_prompt_begin(
+                builder.cursor(),
+                heap_index
+            )?;
+
+            let (params, results) = blocktype_params_results(module_translation_state, *ty)?;
+            let next = ebb_with_params(builder, results)?;
+            state.push_prompt(next, params.len(), results.len());
+        }
+        Operator::ContinuationDelete => {
+            let heap_index = MemoryIndex::from_u32(0);
+            let kid = state.pop1();
+            environ.translate_continuation_delete(
+                builder.cursor(),
+                kid,
+                heap_index
+            )?;
         }
         /******************************* Load instructions ***********************************
          * Wasm specifies an integer alignment flag but we drop it in Cranelift.
