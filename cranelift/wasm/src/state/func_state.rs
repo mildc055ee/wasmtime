@@ -85,6 +85,13 @@ pub enum ControlStackFrame {
         num_return_values: usize,
         original_stack_size: usize,
     },
+    Prompt {
+        destination: Ebb,
+        num_param_values: usize,
+        num_return_values: usize,
+        original_stack_size: usize,
+        exit_is_branched_to: bool,
+    }
 }
 
 /// Helper methods for the control stack objects.
@@ -100,6 +107,9 @@ impl ControlStackFrame {
             | Self::Loop {
                 num_return_values, ..
             } => num_return_values,
+            | Self::Prompt {
+                num_return_values, ..
+            } => num_return_values,
         }
     }
     pub fn num_param_values(&self) -> usize {
@@ -113,6 +123,9 @@ impl ControlStackFrame {
             | Self::Loop {
                 num_param_values, ..
             } => num_param_values,
+            | Self::Prompt {
+                num_param_values, ..
+            } => num_param_values,
         }
     }
     pub fn following_code(&self) -> Block {
@@ -120,11 +133,14 @@ impl ControlStackFrame {
             Self::If { destination, .. }
             | Self::Block { destination, .. }
             | Self::Loop { destination, .. } => destination,
+            | Self::Prompt { destination, .. } => destination,
         }
     }
     pub fn br_destination(&self) -> Block {
         match *self {
-            Self::If { destination, .. } | Self::Block { destination, .. } => destination,
+            Self::If { destination, .. }
+            | Self::Block { destination, .. }
+            | Self::Prompt { destination, .. } => destination,
             Self::Loop { header, .. } => header,
         }
     }
@@ -143,6 +159,10 @@ impl ControlStackFrame {
             | Self::Loop {
                 original_stack_size,
                 ..
+            }
+            | Self::Prompt {
+                original_stack_size,
+                ..
             } => original_stack_size,
         }
     }
@@ -150,6 +170,15 @@ impl ControlStackFrame {
         match *self {
             Self::If { .. } | Self::Block { .. } => false,
             Self::Loop { .. } => true,
+            Self::Prompt { .. } => false,
+        }
+    }
+
+    pub fn is_prompt(&self) -> bool {
+        match *self {
+            Self::If { .. } | Self::Block { .. } => false,
+            Self::Loop { .. } => false,
+            Self::Prompt { .. } => true,
         }
     }
 
@@ -160,6 +189,10 @@ impl ControlStackFrame {
                 ..
             }
             | Self::Block {
+                exit_is_branched_to,
+                ..
+            } => exit_is_branched_to,
+            | Self::Prompt {
                 exit_is_branched_to,
                 ..
             } => exit_is_branched_to,
@@ -174,6 +207,10 @@ impl ControlStackFrame {
                 ..
             }
             | Self::Block {
+                ref mut exit_is_branched_to,
+                ..
+            }
+            | Self::Prompt {
                 ref mut exit_is_branched_to,
                 ..
             } => *exit_is_branched_to = true,
@@ -401,6 +438,23 @@ impl FuncTranslationState {
             original_stack_size: self.stack.len() - num_param_types,
             num_param_values: num_param_types,
             num_return_values: num_result_types,
+        });
+    }
+
+    /// Push a prompt on the control stack.
+    pub(crate) fn push_prompt(
+        &mut self,
+        following_code: Ebb,
+        num_param_types: usize,
+        num_result_types: usize,
+    ) {
+        debug_assert!(num_param_types <= self.stack.len());
+        self.control_stack.push(ControlStackFrame::Prompt {
+            destination: following_code,
+            original_stack_size: self.stack.len() - num_param_types,
+            num_param_values: num_param_types,
+            num_return_values: num_result_types,
+            exit_is_branched_to: false
         });
     }
 
